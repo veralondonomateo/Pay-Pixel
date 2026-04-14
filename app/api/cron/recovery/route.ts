@@ -15,7 +15,7 @@ const STEPS = [
   { step: 4, minDelay: 4320, maxDelay: 7200, channel: "whatsapp" },
 ] as const;
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   // Verificar secret del cron
   const auth = req.headers.get("authorization");
   if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {

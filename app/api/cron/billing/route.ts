@@ -5,7 +5,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const FREE_TIER_LIMIT = 100;
 const PRICE_PER_ORDER_COP = 1500;
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
   if (CRON_SECRET && auth !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
