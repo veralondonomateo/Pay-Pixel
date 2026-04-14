@@ -1,7 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export interface RecoveryEmailOpts {
   to: string;
   firstName: string;
@@ -26,6 +24,7 @@ function formatCOP(n: number): string {
 }
 
 export async function sendRecoveryEmail(opts: RecoveryEmailOpts): Promise<void> {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const {
     to, firstName, brandName, brandLogo, primaryColor, productName,
     productImage, total, recoveryUrl, subject, discountCode, discountPercent,
@@ -117,6 +116,7 @@ export async function sendOrderConfirmationEmail(opts: {
   items: Array<{ name: string; variant?: string | null; quantity: number; price: number }>;
   paymentMethod: "mercadopago" | "contraentrega";
 }): Promise<void> {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const { to, firstName, brandName, primaryColor, orderId, total, items, paymentMethod } = opts;
 
   const itemRows = items

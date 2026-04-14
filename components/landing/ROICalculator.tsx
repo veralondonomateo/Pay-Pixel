@@ -23,9 +23,9 @@ export default function ROICalculator() {
   const results = useMemo(() => {
     const monthlyRevenue = orders * aov;
 
-    // 1. Ahorro en comisiones Shopify (1% sobre pedidos MP)
+    // 1. Ahorro en comisiones Shopify (2% sobre pedidos MP)
     const mpOrders = orders * (mpPercent / 100);
-    const shopifyCommission = mpOrders * aov * 0.01;
+    const shopifyCommission = mpOrders * aov * 0.02;
 
     // 2. Revenue recuperado de atribución
     // Sin CAPI: ~35% de compras no se atribuyen → ROAS subvaluado
@@ -176,15 +176,25 @@ export default function ROICalculator() {
               {
                 label: "Ahorro comisiones Shopify",
                 value: results.shopifyCommission,
-                icon: "💰",
-                desc: "1% que Shopify cobra por cada pago externo",
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+                iconColor: "text-green-400 bg-green-500/[0.12]",
+                desc: "2% que Shopify cobra por cada pago con MercadoPago",
                 color: "from-green-500/20 to-green-600/10",
                 border: "border-green-500/20",
               },
               {
                 label: "Mejora de atribución (ROAS)",
                 value: results.attributionRecovery,
-                icon: "📡",
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+                  </svg>
+                ),
+                iconColor: "text-blue-400 bg-blue-500/[0.12]",
                 desc: `+${results.roasImprovement}% en ROAS → más presupuesto rentable`,
                 color: "from-blue-500/20 to-blue-600/10",
                 border: "border-blue-500/20",
@@ -192,7 +202,12 @@ export default function ROICalculator() {
               {
                 label: "Upsells post-compra",
                 value: results.upsellRevenue,
-                icon: "⚡",
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                  </svg>
+                ),
+                iconColor: "text-purple-400 bg-purple-500/[0.12]",
                 desc: "20% aceptación · 30% del ticket",
                 color: "from-purple-500/20 to-purple-600/10",
                 border: "border-purple-500/20",
@@ -200,7 +215,12 @@ export default function ROICalculator() {
               {
                 label: "Recuperación de carritos",
                 value: results.cartRecovery,
-                icon: "💬",
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                  </svg>
+                ),
+                iconColor: "text-orange-400 bg-orange-500/[0.12]",
                 desc: "WhatsApp + email · 17% tasa de recuperación",
                 color: "from-orange-500/20 to-orange-600/10",
                 border: "border-orange-500/20",
@@ -208,7 +228,7 @@ export default function ROICalculator() {
             ].map((item) => (
               <div key={item.label}
                 className={`flex items-center gap-4 p-3.5 rounded-xl bg-gradient-to-r ${item.color} border ${item.border}`}>
-                <span className="text-xl flex-shrink-0">{item.icon}</span>
+                <span className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ${item.iconColor}`}>{item.icon}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white">{item.label}</p>
                   <p className="text-xs text-gray-400 truncate">{item.desc}</p>

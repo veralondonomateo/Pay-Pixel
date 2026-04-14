@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
 
 export default function RegisterPage() {
@@ -23,8 +24,6 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Error al registrar"); return; }
-
-      // Auto-login
       const supabase = createBrowserSupabaseClient();
       await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
       router.push("/dashboard/settings");
@@ -36,39 +35,91 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-[#030308] flex items-center justify-center px-4">
+      {/* Subtle top glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[480px] h-[1px] pointer-events-none"
+        style={{ background: "linear-gradient(90deg, transparent, rgba(99,102,241,0.3), transparent)" }} />
+
+      <div className="w-full max-w-[360px]">
+
+        {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">PayPixel</h1>
-          <p className="text-sm text-gray-500 mt-1">Crea tu cuenta — gratis hasta 100 pedidos</p>
+          <Link href="/">
+            <Image src="/Pay Pixel-1.png" alt="PayPixel" width={100} height={22} className="object-contain mx-auto" />
+          </Link>
+          <p className="text-sm text-white/30 mt-3">Gratis hasta 100 pedidos · Sin tarjeta</p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Nombre de tu marca</label>
-            <input type="text" value={form.brandName} onChange={(e) => setForm(f => ({ ...f, brandName: e.target.value }))} required placeholder="FEM Suplementos"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
-          </div>
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
-          </div>
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Contraseña</label>
-            <input type="password" value={form.password} onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))} required minLength={8}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500" />
-          </div>
-          {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>}
-          <button type="submit" disabled={loading}
-            className="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60 transition-colors">
-            {loading ? "Creando cuenta..." : "Crear cuenta gratis"}
-          </button>
-          <p className="text-center text-xs text-gray-400">Al registrarte aceptas los términos de servicio.</p>
-          <p className="text-center text-xs text-gray-500">
-            ¿Ya tienes cuenta?{" "}
-            <Link href="/login" className="text-indigo-600 hover:underline font-medium">Inicia sesión</Link>
-          </p>
-        </form>
+
+        {/* Form */}
+        <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm text-white/50 mb-1.5">Nombre de tu marca</label>
+              <input
+                type="text"
+                value={form.brandName}
+                onChange={(e) => setForm(f => ({ ...f, brandName: e.target.value }))}
+                required
+                placeholder="FEM Suplementos"
+                className="input-dark"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-white/50 mb-1.5">Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+                required
+                placeholder="tu@email.com"
+                className="input-dark"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-white/50 mb-1.5">Contraseña</label>
+              <input
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))}
+                required
+                minLength={8}
+                placeholder="Mínimo 8 caracteres"
+                className="input-dark"
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-400">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-400 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors mt-1"
+            >
+              {loading ? "Creando cuenta..." : "Crear cuenta gratis"}
+            </button>
+
+            <p className="text-center text-xs text-white/20">
+              Al registrarte aceptas los términos de servicio.
+            </p>
+          </form>
+        </div>
+
+        <p className="text-center text-sm text-white/30 mt-5">
+          ¿Ya tienes cuenta?{" "}
+          <Link href="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+            Inicia sesión
+          </Link>
+        </p>
+
+        <p className="text-center mt-6">
+          <Link href="/" className="text-xs text-white/20 hover:text-white/40 transition-colors">
+            ← Volver al inicio
+          </Link>
+        </p>
       </div>
     </div>
   );
