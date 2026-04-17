@@ -18,6 +18,7 @@ interface Props {
   watch: UseFormWatch<CheckoutFormData>;
   setValue: UseFormSetValue<CheckoutFormData>;
   stepNumber?: number;
+  brandColor?: string;
 }
 
 export default function DeliverySection({
@@ -26,6 +27,7 @@ export default function DeliverySection({
   watch,
   setValue,
   stepNumber = 2,
+  brandColor = "#6366f1",
 }: Props) {
   const selectedState = watch("state");
 
@@ -55,7 +57,10 @@ export default function DeliverySection({
   return (
     <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
       <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-        <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">
+        <span
+          className="w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold flex-shrink-0"
+          style={{ backgroundColor: brandColor }}
+        >
           {stepNumber}
         </span>
         Dirección de entrega

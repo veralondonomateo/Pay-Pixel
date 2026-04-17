@@ -3,6 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
 
+interface ShopifyProduct {
+  id: number;
+  title: string;
+  handle: string;
+  variants: { id: number; title: string; price: string }[];
+  images: { src: string }[];
+}
+
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -41,12 +49,16 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [shopifyProducts, setShopifyProducts] = useState<ShopifyProduct[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [form, setForm] = useState({
     name: "", primary_color: "#6366f1",
     shopify_domain: "", shopify_access_token: "",
     mp_access_token: "",
     meta_pixel_id: "", meta_conversions_token: "",
     tiktok_pixel_id: "", tiktok_events_token: "",
+    default_product_handle: "",
   });
 
   useEffect(() => {
@@ -66,7 +78,21 @@ export default function SettingsPage() {
           mp_access_token: "",
           meta_pixel_id: b.meta_pixel_id ?? "", meta_conversions_token: "",
           tiktok_pixel_id: b.tiktok_pixel_id ?? "", tiktok_events_token: "",
+          default_product_handle: b.default_product_handle ?? "",
         });
+
+        // Cargar productos de Shopify si está conectado
+        if (b.shopify_domain && b.slug) {
+          setLoadingProducts(true);
+          try {
+            const res = await fetch(`/api/${b.slug}/products`);
+            if (res.ok) {
+              const json = await res.json();
+              setShopifyProducts(json.products ?? []);
+            }
+          } catch { /* Shopify no conectado */ }
+          setLoadingProducts(false);
+        }
       }
     })();
   }, []);
@@ -99,6 +125,17 @@ export default function SettingsPage() {
     setSaving(false);
   };
 
+  const checkoutUrl = brand
+    ? `${window.location.origin}/checkout/${brand.slug}${form.default_product_handle ? `?product=${form.default_product_handle}` : ""}`
+    : "";
+
+  const copyUrl = () => {
+    if (!checkoutUrl) return;
+    navigator.clipboard.writeText(checkoutUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const color = form.primary_color;
 
   return (
@@ -117,9 +154,91 @@ export default function SettingsPage() {
       </div>
 
       <form onSubmit={handleSave} className="space-y-4">
-        {/* Marca */}
+
+        {/* ── Enlace de checkout ── */}
+        <Section title="Enlace de checkout">
+          <Field
+            label="Producto principal"
+            hint={
+              shopifyProducts.length
+                ? "El producto que verán los clientes al entrar a tu enlace de checkout"
+                : form.shopify_domain
+                  ? "Cargando productos de Shopify..."
+                  : "Conecta Shopify para elegir tu producto principal"
+            }
+          >
+            {shopifyProducts.length > 0 ? (
+              <select
+                value={form.default_product_handle}
+                onChange={(e) => set("default_product_handle", e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl text-sm text-white outline-none transition-all"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                <option value="">— Sin producto por defecto (muestra catálogo) —</option>
+                {shopifyProducts.map((p) => (
+                  <option key={p.id} value={p.handle}>
+                    {p.title}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={form.default_product_handle}
+                onChange={(e) => set("default_product_handle", e.target.value)}
+                placeholder="mi-producto (handle de Shopify)"
+                disabled={loadingProducts}
+              />
+            )}
+          </Field>
+
+          {/* URL generada */}
+          {brand && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>
+                Tu enlace de checkout
+              </label>
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-mono overflow-hidden text-ellipsis whitespace-nowrap"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}
+                >
+                  /checkout/{brand.slug}
+                  {form.default_product_handle && <span style={{ color }}>{`?product=${form.default_product_handle}`}</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={copyUrl}
+                  className="px-3 py-2.5 rounded-xl text-xs font-medium flex-shrink-0 transition-all"
+                  style={{
+                    background: copied ? `${color}28` : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${copied ? color + "50" : "rgba(255,255,255,0.08)"}`,
+                    color: copied ? color : "rgba(255,255,255,0.4)",
+                  }}
+                >
+                  {copied ? "✓ Copiado" : "Copiar"}
+                </button>
+                {brand.slug && (
+                  <a
+                    href={checkoutUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium flex-shrink-0 transition-all"
+                    style={{
+                      background: `${color}18`,
+                      border: `1px solid ${color}30`,
+                      color,
+                    }}
+                  >
+                    Ver →
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </Section>
+
+        {/* ── Marca ── */}
         <Section title="Identidad de la marca">
-          {/* Logo */}
           <Field label="Logo" hint="PNG, JPG o SVG — máx 2MB">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0"
@@ -168,7 +287,7 @@ export default function SettingsPage() {
           </Field>
         </Section>
 
-        {/* Shopify */}
+        {/* ── Shopify ── */}
         <Section title="Shopify">
           <Field label="Dominio" hint="ej: mitienda.myshopify.com">
             <Input value={form.shopify_domain} onChange={(e) => set("shopify_domain", e.target.value)} placeholder="tienda.myshopify.com" />
@@ -178,14 +297,14 @@ export default function SettingsPage() {
           </Field>
         </Section>
 
-        {/* MercadoPago */}
+        {/* ── MercadoPago ── */}
         <Section title="MercadoPago">
           <Field label="Access Token" hint="Deja vacío para no cambiar el token actual">
             <Input type="password" value={form.mp_access_token} onChange={(e) => set("mp_access_token", e.target.value)} placeholder="APP_USR-••••••••" />
           </Field>
         </Section>
 
-        {/* Meta */}
+        {/* ── Meta ── */}
         <Section title="Meta (Facebook / Instagram)">
           <Field label="Pixel ID">
             <Input value={form.meta_pixel_id} onChange={(e) => set("meta_pixel_id", e.target.value)} placeholder="1234567890123456" />
@@ -195,7 +314,7 @@ export default function SettingsPage() {
           </Field>
         </Section>
 
-        {/* TikTok */}
+        {/* ── TikTok ── */}
         <Section title="TikTok">
           <Field label="Pixel ID">
             <Input value={form.tiktok_pixel_id} onChange={(e) => set("tiktok_pixel_id", e.target.value)} placeholder="XXXXXXXXXX" />

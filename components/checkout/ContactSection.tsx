@@ -7,14 +7,26 @@ import Input from "@/components/ui/Input";
 interface Props {
   register: UseFormRegister<CheckoutFormData>;
   errors: FieldErrors<CheckoutFormData>;
+  brandColor: string;
+  stepNumber?: number;
 }
 
-export default function ContactSection({ register, errors }: Props) {
+export default function ContactSection({
+  register,
+  errors,
+  brandColor,
+  stepNumber = 2,
+}: Props) {
   return (
     <section className="bg-white rounded-xl border border-gray-200 p-5 sm:p-6 space-y-4">
       <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
-        <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
-        Información de contacto
+        <span
+          className="w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold flex-shrink-0"
+          style={{ backgroundColor: brandColor }}
+        >
+          {stepNumber}
+        </span>
+        Información personal
       </h3>
 
       <div className="grid grid-cols-2 gap-3">
@@ -33,14 +45,6 @@ export default function ContactSection({ register, errors }: Props) {
       </div>
 
       <Input
-        label="Email"
-        type="email"
-        placeholder="juan@email.com"
-        error={errors.email?.message}
-        {...register("email")}
-      />
-
-      <Input
         label="Teléfono (celular)"
         type="tel"
         placeholder="3001234567"
@@ -49,7 +53,7 @@ export default function ContactSection({ register, errors }: Props) {
       />
 
       <Input
-        label="Cédula (opcional)"
+        label="Cédula o NIT (opcional)"
         placeholder="1234567890"
         {...register("cedula")}
       />

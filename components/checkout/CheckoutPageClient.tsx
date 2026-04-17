@@ -8,6 +8,7 @@ import type { BrandPublic, UpsellProduct } from "@/types/tenant";
 import type { CheckoutItem, CheckoutFormData } from "@/types/checkout";
 import type { ShopifyProduct } from "@/lib/shopify";
 import CheckoutHeader from "./CheckoutHeader";
+import EmailSection from "./EmailSection";
 import ContactSection from "./ContactSection";
 import DeliverySection from "./DeliverySection";
 import UpsellSection from "./UpsellSection";
@@ -15,7 +16,7 @@ import PaymentSection from "./PaymentSection";
 import OrderSummary from "./OrderSummary";
 import Button from "@/components/ui/Button";
 
-const SHIPPING = 0; // El tenant configura el envío — 0 = gratis por defecto
+const SHIPPING = 0;
 
 const schema = z.object({
   email: z
@@ -45,10 +46,7 @@ function formatCOP(n: number) {
   }).format(n);
 }
 
-function shopifyProductToItem(
-  p: ShopifyProduct,
-  variantId?: number
-): CheckoutItem {
+function shopifyProductToItem(p: ShopifyProduct, variantId?: number): CheckoutItem {
   const variant = variantId
     ? (p.variants.find((v) => v.id === variantId) ?? p.variants[0])
     : p.variants[0];
@@ -63,11 +61,48 @@ function shopifyProductToItem(
   };
 }
 
+// ── Default upsells shown when the brand hasn't configured any yet ─────────────
+const DEMO_UPSELLS: UpsellProduct[] = [
+  {
+    id: "demo-upsell-1",
+    brand_id: "",
+    shopify_handle: "",
+    name: "Producto complementario",
+    variant: "Ejemplo de variante",
+    price: 49900,
+    compare_price: 79900,
+    image: null,
+    benefit: "Perfecto para completar tu pedido",
+    stock: 12,
+    sold_today: 7,
+    position: 1,
+    show_in_checkout: true,
+    show_post_purchase: false,
+  },
+  {
+    id: "demo-upsell-2",
+    brand_id: "",
+    shopify_handle: "",
+    name: "Accesorio adicional",
+    variant: null,
+    price: 34900,
+    compare_price: 59900,
+    image: null,
+    benefit: "Incluye garantía de 6 meses",
+    stock: 5,
+    sold_today: 3,
+    position: 2,
+    show_in_checkout: true,
+    show_post_purchase: false,
+  },
+];
+
 interface Props {
   brand: BrandPublic;
   slug: string;
   shopifyProduct?: ShopifyProduct | null;
   upsellProducts: UpsellProduct[];
+  isShopifyConnected?: boolean;
   initialVariantId?: number;
   initialQty?: number;
   recoveryData?: {
@@ -84,6 +119,7 @@ export default function CheckoutPageClient({
   slug,
   shopifyProduct,
   upsellProducts,
+  isShopifyConnected = false,
   initialVariantId,
   initialQty = 1,
   recoveryData,
@@ -121,12 +157,19 @@ export default function CheckoutPageClient({
   const [mainQty, setMainQty] = useState(initialQty);
   const [upsellQty, setUpsellQty] = useState<Record<string, number>>({});
 
-  // Si hay recoveryData, pre-cargar items del carrito
-  useEffect(() => {
-    if (recoveryData?.items?.length && !shopifyProduct) {
-      // pre-fill handled via recovery items (display only)
-    }
-  }, [recoveryData, shopifyProduct]);
+  // ── Determine which upsells to show ─────────────────────────────────────────
+  // - Real upsells: show real ones (real data from DB, not demo)
+  // - Shopify connected but no configured upsells: no section (empty)
+  // - Shopify NOT connected: show demo upsells so owner sees how it looks
+  const showDemoUpsells = !isShopifyConnected && upsellProducts.length === 0;
+  const activeUpsells = upsellProducts.length > 0 ? upsellProducts : showDemoUpsells ? DEMO_UPSELLS : [];
+
+  // ── Step numbering ───────────────────────────────────────────────────────────
+  const hasUpsells = activeUpsells.length > 0;
+  const contactStep = 2;
+  const deliveryStep = 3;
+  const upsellStep = 4;
+  const paymentStep = hasUpsells ? 5 : 4;
 
   // Pixel: InitiateCheckout
   useEffect(() => {
@@ -175,6 +218,7 @@ export default function CheckoutPageClient({
   // ── Totals ──────────────────────────────────────────────────────────────────
   const allItems = useMemo<CheckoutItem[]>(() => {
     const main = { ...mainItem, quantity: mainQty };
+    // Only add real upsells (not demo) to the cart
     const added = upsellProducts
       .filter((p) => (upsellQty[p.id] ?? 0) > 0)
       .map((p) => ({
@@ -204,7 +248,6 @@ export default function CheckoutPageClient({
     setIsSubmitting(true);
     setSubmitError("");
     try {
-      // Recopilar attribution cookies
       const getCookie = (name: string) =>
         document.cookie
           .split("; ")
@@ -231,7 +274,6 @@ export default function CheckoutPageClient({
       if (!res.ok) throw new Error("Error del servidor");
       const result = await res.json();
 
-      // Guardar datos para la thank-you page
       sessionStorage.setItem(
         `pp-order-${slug}`,
         JSON.stringify({
@@ -253,9 +295,7 @@ export default function CheckoutPageClient({
       }
     } catch (err) {
       console.error("Checkout error:", err);
-      setSubmitError(
-        "Ocurrió un error al procesar tu pedido. Por favor intenta de nuevo."
-      );
+      setSubmitError("Ocurrió un error al procesar tu pedido. Por favor intenta de nuevo.");
     } finally {
       setIsSubmitting(false);
     }
@@ -270,29 +310,47 @@ export default function CheckoutPageClient({
 
           {/* ── Formulario ── */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-            <ContactSection register={register} errors={errors} />
+
+            {/* Step 1 — Email */}
+            <EmailSection register={register} errors={errors} brandColor={brandColor} />
+
+            {/* Step 2 — Información personal */}
+            <ContactSection
+              register={register}
+              errors={errors}
+              brandColor={brandColor}
+              stepNumber={contactStep}
+            />
+
+            {/* Step 3 — Dirección */}
             <DeliverySection
               register={register}
               errors={errors}
               watch={watch}
               setValue={setValue}
+              brandColor={brandColor}
+              stepNumber={deliveryStep}
             />
 
-            {upsellProducts.length > 0 && (
+            {/* Step 4 — Upsells (real o demo) */}
+            {activeUpsells.length > 0 && (
               <UpsellSection
-                products={upsellProducts}
-                qty={upsellQty}
+                products={activeUpsells}
+                qty={showDemoUpsells ? {} : upsellQty}
                 onToggle={handleUpsellToggle}
                 brandColor={brandColor}
+                stepNumber={upsellStep}
+                isDemo={showDemoUpsells}
               />
             )}
 
+            {/* Step 4/5 — Pago */}
             <PaymentSection
               register={register}
               errors={errors}
               watch={watch}
               brandColor={brandColor}
-              stepNumber={upsellProducts.length > 0 ? 4 : 3}
+              stepNumber={paymentStep}
             />
 
             {/* Dirección de facturación */}
@@ -331,9 +389,7 @@ export default function CheckoutPageClient({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                <span>
-                  Completar pedido · {formatCOP(total)}
-                </span>
+                <span>Completar pedido · {formatCOP(total)}</span>
               </Button>
               <p className="text-center text-xs text-gray-400 mt-2">
                 Transacción 100% segura y encriptada

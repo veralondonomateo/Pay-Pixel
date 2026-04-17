@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     shopify_domain: body.shopify_domain || null,
     meta_pixel_id: body.meta_pixel_id || null,
     tiktok_pixel_id: body.tiktok_pixel_id || null,
+    default_product_handle: body.default_product_handle || null,
   };
 
   // Solo encriptar y actualizar tokens si se enviaron (no vacíos)
