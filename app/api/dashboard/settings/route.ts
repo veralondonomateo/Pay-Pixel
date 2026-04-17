@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase";
+import { createServerClient, createServiceClient } from "@/lib/supabase";
 import { encrypt } from "@/lib/encryption";
 
 export async function POST(req: NextRequest) {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Verificar identidad con el cliente de usuario (cookies / anon key)
+  const authClient = await createServerClient();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const body = await req.json();
+
+  // Usar service client (bypasa RLS) para las operaciones de DB
+  const supabase = createServiceClient();
+
   const { data: membership } = await supabase
     .from("brand_members")
     .select("brand_id")
@@ -29,6 +34,9 @@ export async function POST(req: NextRequest) {
   if (body.mp_access_token) updates.mp_access_token = encrypt(body.mp_access_token);
   if (body.meta_conversions_token) updates.meta_conversions_token = encrypt(body.meta_conversions_token);
   if (body.tiktok_events_token) updates.tiktok_events_token = encrypt(body.tiktok_events_token);
+
+  // Manejar logo_url si se envió explícitamente (para quitar logo)
+  if ("logo_url" in body) updates.logo_url = body.logo_url;
 
   const { error } = await supabase
     .from("brands")

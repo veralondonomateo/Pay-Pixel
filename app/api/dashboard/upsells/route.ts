@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase";
+import { createServerClient, createServiceClient } from "@/lib/supabase";
 
-async function getBrandId(supabase: Awaited<ReturnType<typeof createServerClient>>) {
-  const { data: { user } } = await supabase.auth.getUser();
+async function getAuthenticatedBrandId(): Promise<string | null> {
+  // Verificar identidad con cliente de usuario (cookies)
+  const authClient = await createServerClient();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return null;
-  const { data: m } = await supabase
+
+  // Obtener brand_id con service client (bypasa RLS)
+  const db = createServiceClient();
+  const { data: m } = await db
     .from("brand_members")
     .select("brand_id")
     .eq("user_id", user.id)
@@ -14,11 +19,11 @@ async function getBrandId(supabase: Awaited<ReturnType<typeof createServerClient
 
 // GET — list upsells for brand
 export async function GET() {
-  const supabase = await createServerClient();
-  const brandId = await getBrandId(supabase);
+  const brandId = await getAuthenticatedBrandId();
   if (!brandId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { data, error } = await supabase
+  const db = createServiceClient();
+  const { data, error } = await db
     .from("upsell_products")
     .select("*")
     .eq("brand_id", brandId)
@@ -30,14 +35,14 @@ export async function GET() {
 
 // POST — create upsell
 export async function POST(req: NextRequest) {
-  const supabase = await createServerClient();
-  const brandId = await getBrandId(supabase);
+  const brandId = await getAuthenticatedBrandId();
   if (!brandId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const body = await req.json();
+  const db = createServiceClient();
 
   // Get next position
-  const { data: existing } = await supabase
+  const { data: existing } = await db
     .from("upsell_products")
     .select("position")
     .eq("brand_id", brandId)
@@ -45,7 +50,7 @@ export async function POST(req: NextRequest) {
     .limit(1);
   const nextPos = (existing?.[0]?.position ?? 0) + 1;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("upsell_products")
     .insert({
       brand_id: brandId,
@@ -72,8 +77,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH — update upsell
 export async function PATCH(req: NextRequest) {
-  const supabase = await createServerClient();
-  const brandId = await getBrandId(supabase);
+  const brandId = await getAuthenticatedBrandId();
   if (!brandId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const body = await req.json();
@@ -94,7 +98,8 @@ export async function PATCH(req: NextRequest) {
   if (updates.show_post_purchase !== undefined) sanitized.show_post_purchase = updates.show_post_purchase;
   if (updates.position !== undefined) sanitized.position = Number(updates.position);
 
-  const { data, error } = await supabase
+  const db = createServiceClient();
+  const { data, error } = await db
     .from("upsell_products")
     .update(sanitized)
     .eq("id", id)
@@ -108,15 +113,15 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE — remove upsell
 export async function DELETE(req: NextRequest) {
-  const supabase = await createServerClient();
-  const brandId = await getBrandId(supabase);
+  const brandId = await getAuthenticatedBrandId();
   if (!brandId) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "ID requerido" }, { status: 400 });
 
-  const { error } = await supabase
+  const db = createServiceClient();
+  const { error } = await db
     .from("upsell_products")
     .delete()
     .eq("id", id)
